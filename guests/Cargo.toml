@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "hello-world",
+]
+resolver = "2"
+
+# Optimization: Production Wasm should be small
+[profile.release]
+opt-level = "s"      # Optimize for binary size
+strip = true         # Remove symbols
+lto = true           # Link Time Optimization

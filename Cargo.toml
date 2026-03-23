@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/serverless-runner",
+    "crates/serverless-core",
+]
+resolver = "2"

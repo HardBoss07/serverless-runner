@@ -1,0 +1,19 @@
+[package]
+name = "serverless-core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Database & Async
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "tls-native-tls", "postgres", "macros", "chrono"] }
+tokio = { version = "1.50", features = ["full"] }
+
+# Error Handling (Standard for production Rust)
+thiserror = "2.0.18"
+
+# Serialization
+serde = { version = "1.0.228", features = ["derive"] }
+chrono = { version = "0.4.44", features = ["serde"] }
+
+# Environment
+dotenvy = "0.15.7"
