@@ -2,5 +2,9 @@
 members = [
     "crates/serverless-runner",
     "crates/serverless-core",
+    "guests/hello-world",
+    "guests/fibonacci",
+    "tests",
 ]
+
 resolver = "2"

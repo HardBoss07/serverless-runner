@@ -11,12 +11,27 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-    # Healthcheck ensures your Rust app doesn't try to connect before Postgres is ready
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U platform_user -d platform_db"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  runner:
+    build: .
+    container_name: serverless_runner
+    restart: always
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://platform_user:secret_password@db:5432/platform_db
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./guests_compiled:/usr/app/guests_compiled
 
 volumes:
   pgdata:

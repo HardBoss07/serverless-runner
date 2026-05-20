@@ -1,0 +1,10 @@
+target/
+**/target/
+.git/
+.env
+*.wasm
+guests_compiled/
+docs/
+Project Structure.md
+Roadmap.md
+GEMINI.md
