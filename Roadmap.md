@@ -5,9 +5,10 @@
 - [x] Install `cargo-watch`, `sqlx-cli`, and add the `wasm32-wasi` target.
 - [x] Initialize the project folders (`core`, `runner`, `guests`) and root `Cargo.toml` workspace.
 - [x] Create `.env` and `docker-compose.yml`.
-- [ ] Run `docker-compose up -d` to start Postgres.
-- [ ] Run `sqlx database create` and `sqlx migrate add init` to setup the DB schema.
-- [ ] Build the `core` crate (DB connection pool, error handling).
+- [x] Phase 1: Ingestion & Workspace Prep
+- [x] Run `docker-compose up -d` to start Postgres.
+- [x] Run `sqlx database create` and `sqlx migrate add init` to setup the DB schema.
+- [x] Build the `core` crate (DB connection pool, error handling).
 - [ ] Build a simple "Hello World" Rust function in the `guests` folder and compile it to Wasm.
 - [ ] Build the `runner` crate (Axum server + Wasmtime integration) to load and execute the Wasm file.
 - [ ] Wire the `runner` to save execution logs/metrics to the database via `core`.

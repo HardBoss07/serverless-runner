@@ -1,108 +1,31 @@
-# GEMINI.md - Serverless Runner Platform
+# Project Scratchpad - serverless-runner
 
-This document serves as the primary guidance for Gemini CLI when working on the `serverless-runner` project. It synthesizes architectural mandates, development standards, and operational workflows.
+## Status
+- [x] Phase 1: Ingestion & Workspace Prep
+- [x] Phase 2: Core Domain Implementation (serverless-core)
+- [x] Phase 3: Runner Engine & API (serverless-runner)
+- [ ] Phase 4: Containerization & Integration
 
-## Project Vision
+## CRITICAL RULES
+- **Docker-only Execution:** ALL runtime execution (tests, runs, builds) must be performed inside the Docker containers defined in `docker-compose.yml` using `docker compose exec`.
+- **Host Limitations:** The host system is strictly reserved for file editing, git operations, and static analysis (e.g., `cargo fmt`, `cargo check`). Executing binaries, tests, or build commands on the host is forbidden to ensure environment isolation.
+- **PowerShell Compliance:** All host-side shell commands must be valid PowerShell syntax (e.g., use `;` for command chaining instead of `&&`).
+- **NO BLOCKING COMMANDS:** Long-lived processes (servers, watch tasks) must NOT be executed via `docker compose exec` or `docker compose run`. Use `docker compose restart` or log analysis instead for managing/verifying background services. Commands executed must be short-lived and terminate gracefully.
 
-A high-performance, sandboxed serverless execution platform. It uses **Rust** for the host (Runner) and **WebAssembly (WASI)** for guest functions, providing hard multi-tenant isolation with minimal overhead.
 
----
+# Decisions & Rules
+- **Error Handling:** Use `AppError` and `AppResult` from `serverless-core`.
+- **Wasm Runtime:** Wasmtime with `async` support.
+- **Communication:** `stdin`/`stdout` memory pipes.
+- **Database:** PostgreSQL with `sqlx`. Log-and-Update pattern.
+- **Formatting:** `cargo fmt` after changes.
 
-## Technical Stack
+## Current State
+- Documentation ingested.
+- Workspace flattened.
+- Database schema and migrations implemented.
+- serverless-core implemented (errors, models, db logic).
+- serverless-runner implemented (Axum API, Wasmtime execution engine).
 
-- **Host Framework:** Axum (Tokio runtime)
-- **Wasm Runtime:** Wasmtime (with WASI support)
-- **Database:** PostgreSQL (via SQLx for async, type-safe queries)
-- **Error Handling:** `thiserror` (unified platform-wide enum)
-- **Serialization:** `serde` / `serde_json`
-- **Target Architecture:** `wasm32-wasi` for all guest functions
-
----
-
-## Architectural Mandates
-
-### 1. Crate Responsibility
-
-- **`serverless-core` (Lib):** Domain logic, DB schema, SQLx queries, shared models, and the `AppError` enum.
-- **`serverless-runner` (Bin):** Axum HTTP server, Wasmtime orchestration (Engine/Store management), and WASI piping.
-- **`guests/` (Independent Workspace):** Standalone Rust projects compiled to `.wasm`.
-
-### 2. Wasmtime Performance & Safety
-
-- **Engine/Store Split:** Initialize one `wasmtime::Engine` at startup. Create a new `wasmtime::Store` for every incoming HTTP request.
-- **Memory Pipes:** Communication between Host and Guest MUST happen via `stdin` (request body) and `stdout` (response body) memory pipes. No direct file system access for guests.
-- **Resource Constraints:**
-  - Memory: Max 64MB per guest.
-  - Execution: Use `fuel` consumption to prevent infinite loops.
-  - Cleanup: Stores must be dropped immediately after execution.
-
-### 3. Database Lifecycle (Log-and-Update)
-
-Do not hold DB transactions open during Wasm execution. Use atomic operations:
-
-1. `log_execution_start`: INSERT record on request receipt.
-2. `complete_execution` or `log_execution_error`: UPDATE record after Wasm yields or fails.
-
----
-
-## Development Standards
-
-### Rust Conventions
-
-- **Error Handling:** Use `AppResult<T>` (alias for `Result<T, AppError>`) for all fallible operations.
-- **Async:** Use `tokio` primitives. Avoid blocking the executor.
-- **Safety:** Minimize `unsafe` code. Rely on Wasmtime for sandbox isolation.
-- **Typing:** Strict typing for database models and API payloads. Use `sqlx::FromRow`.
-
-### Formatting & Style
-
-- **No Emojis:** Do not use emojis in code, comments, or documentation.
-- **Naming:** Follow standard Rust `PascalCase` for types and `snake_case` for functions/variables.
-- **Documentation:** Use triple-slash `///` for public function documentation in `core`.
-
----
-
-## Operational Workflows
-
-### 1. Building Guests
-
-Guests must be compiled to the `wasm32-wasi` target and moved to the distribution folder.
-
-```bash
-# Compile
-cargo build --target wasm32-wasi --release -p guest-hello-world
-# Deploy to runner
-cp target/wasm32-wasi/release/guest_hello_world.wasm ./guests_compiled/
-```
-
-### 2. Database Migrations
-
-Always use `sqlx-cli` for schema changes.
-
-```bash
-sqlx migrate add <description>
-sqlx migrate run
-```
-
-### 3. Testing
-
-- **Unit Tests:** Inside each crate for logic validation.
-- **Integration Tests:** Use `curl` to hit the `/execute/:function_name` endpoint.
-- **Verification:** Always check the `executions` table in Postgres after a test run.
-
----
-
-## Roadmap Context
-
-- [x] Workspace Initialization
-- [ ] Database Schema Setup (Pending `sqlx migrate`)
-- [ ] Core Crate Implementation (DB & Error handling)
-- [ ] Runner Engine (Wasmtime Integration)
-- [ ] Full Loop Validation
-
-## Critical File Paths
-
-- `crates/serverless-core/src/error.rs`: Source of truth for error handling.
-- `crates/serverless-runner/src/engine/`: Wasmtime configuration and execution logic.
-- `docs/`: Technical specifications for every subsystem.
-- `guests_compiled/`: The directory where the Runner looks for `.wasm` binaries.
+## Next Steps
+- Implement integration testing and full loop validation.
