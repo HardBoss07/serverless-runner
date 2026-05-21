@@ -3,9 +3,12 @@ use crate::state::SharedState;
 use axum::{
     body::Bytes,
     extract::{Path, Query, State},
+    http::StatusCode,
     response::IntoResponse,
+    Json,
 };
 use serde::Deserialize;
+use serde_json::json;
 use serverless_core::db;
 use std::time::Instant;
 
@@ -25,6 +28,42 @@ pub async fn execute_function(
     // Verify guest exists before logging to DB
     if !wasm_path.exists() {
         return serverless_core::AppError::GuestNotFound(function_name).into_response();
+    }
+
+    // Input validation for Fibonacci
+    if function_name == "fibonacci" {
+        if let Some(ref n_str) = query.number {
+            if let Ok(n) = n_str.parse::<i64>() {
+                if n < 0 {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(json!({
+                            "error": "Number must be non-negative",
+                            "status": 400
+                        })),
+                    )
+                        .into_response();
+                }
+            } else {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({
+                        "error": "Invalid number parameter",
+                        "status": 400
+                    })),
+                )
+                    .into_response();
+            }
+        } else {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({
+                    "error": "Missing number parameter",
+                    "status": 400
+                })),
+            )
+                .into_response();
+        }
     }
 
     // Determine input: Query param "number" overrides body
@@ -59,10 +98,24 @@ pub async fn execute_function(
             stdout.into_response()
         }
         Err(e) => {
-            if let Err(db_err) =
-                db::log_execution_error(&state.db_pool, execution_id, e.to_string()).await
-            {
-                tracing::error!("Failed to log execution error: {}", db_err);
+            if let serverless_core::AppError::WasmExecution(code, ref stdout) = e {
+                if let Err(db_err) = db::complete_execution(
+                    &state.db_pool,
+                    execution_id,
+                    code,
+                    stdout.clone(),
+                    duration,
+                )
+                .await
+                {
+                    tracing::error!("Failed to complete execution log for panic: {}", db_err);
+                }
+            } else {
+                if let Err(db_err) =
+                    db::log_execution_error(&state.db_pool, execution_id, e.to_string()).await
+                {
+                    tracing::error!("Failed to log execution error: {}", db_err);
+                }
             }
             e.into_response()
         }
