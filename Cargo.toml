@@ -2,9 +2,53 @@
 members = [
     "crates/serverless-runner",
     "crates/serverless-core",
-    "guests/hello-world",
+    "guests/env-reader",
     "guests/fibonacci",
+    "guests/fs-reader",
+    "guests/hello-world",
+    "guests/infinite-loop",
+    "guests/long-output-guest",
+    "guests/memory-hog",
+    "guests/net-guest",
+    "guests/panic-guest",
+    "guests/stdout-spammer",
     "tests",
 ]
 
 resolver = "2"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+
+# Optimization for Wasm guests
+[profile.release.package."env-reader"]
+opt-level = "s"
+
+[profile.release.package."fibonacci"]
+opt-level = "s"
+
+[profile.release.package."fs-reader"]
+opt-level = "s"
+
+[profile.release.package."hello-world"]
+opt-level = "s"
+
+[profile.release.package."infinite-loop"]
+opt-level = "s"
+
+[profile.release.package."long-output-guest"]
+opt-level = "s"
+
+[profile.release.package."memory-hog"]
+opt-level = "s"
+
+[profile.release.package."net-guest"]
+opt-level = "s"
+
+[profile.release.package."panic-guest"]
+opt-level = "s"
+
+[profile.release.package."stdout-spammer"]
+opt-level = "s"
