@@ -1,10 +1,10 @@
 [package]
-name = "fibonacci"
+name = "memory-hog"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 
 [[bin]]
-name = "fibonacci"
+name = "memory-hog"
 path = "src/main.rs"

@@ -1,10 +1,10 @@
 [package]
-name = "fibonacci"
+name = "long-output-guest"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 
 [[bin]]
-name = "fibonacci"
+name = "long-output-guest"
 path = "src/main.rs"

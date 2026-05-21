@@ -3,9 +3,41 @@
 version = 4
 
 [[package]]
+name = "env-reader"
+version = "0.1.0"
+
+[[package]]
 name = "fibonacci"
 version = "0.1.0"
 
 [[package]]
+name = "fs-reader"
+version = "0.1.0"
+
+[[package]]
 name = "hello-world"
+version = "0.1.0"
+
+[[package]]
+name = "infinite-loop"
+version = "0.1.0"
+
+[[package]]
+name = "long-output-guest"
+version = "0.1.0"
+
+[[package]]
+name = "memory-hog"
+version = "0.1.0"
+
+[[package]]
+name = "net-guest"
+version = "0.1.0"
+
+[[package]]
+name = "panic-guest"
+version = "0.1.0"
+
+[[package]]
+name = "stdout-spammer"
 version = "0.1.0"

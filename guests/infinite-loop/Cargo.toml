@@ -1,10 +1,10 @@
 [package]
-name = "fibonacci"
+name = "infinite-loop"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 
 [[bin]]
-name = "fibonacci"
+name = "infinite-loop"
 path = "src/main.rs"

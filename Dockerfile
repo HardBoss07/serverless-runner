@@ -19,13 +19,24 @@ COPY tests/ ./tests/
 
 # Build the runner and guests
 RUN mkdir -p guests_compiled && \
+    # 1. Build the host runner
     cargo build --release -p serverless-runner && \
+    # 2. Add WASI target
     rustup target add wasm32-wasip1 && \
-    cargo build --release -p hello-world --target wasm32-wasip1 && \
-    cp target/wasm32-wasip1/release/hello-world.wasm guests_compiled/ && \
-    cargo build --release -p fibonacci --target wasm32-wasip1 && \
-    ls -l target/wasm32-wasip1/release/fibonacci.wasm && \
-    cp target/wasm32-wasip1/release/fibonacci.wasm guests_compiled/
+    # 3. Build all Wasm guests in a single Cargo invocation
+    cargo build --release --target wasm32-wasip1 \
+        -p env-reader \
+        -p fibonacci \
+        -p fs-reader \
+        -p hello-world \
+        -p infinite-loop \
+        -p long-output-guest \
+        -p memory-hog \
+        -p net-guest \
+        -p panic-guest \
+        -p stdout-spammer && \
+    # 4. Copy all compiled .wasm files to the execution folder
+    cp target/wasm32-wasip1/release/*.wasm guests_compiled/
 
 # Runtime stage
 FROM debian:bookworm-slim

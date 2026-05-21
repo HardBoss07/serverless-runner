@@ -1,6 +1,6 @@
 [workspace]
-members = ["fibonacci",
-    "hello-world",
+members = ["env-reader","fibonacci", "fs-reader",
+    "hello-world", "infinite-loop", "long-output-guest", "memory-hog", "net-guest", "panic-guest", "stdout-spammer",
 ]
 resolver = "2"
 
