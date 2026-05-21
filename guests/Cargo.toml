@@ -1,5 +1,5 @@
 [workspace]
-members = [
+members = ["fibonacci",
     "hello-world",
 ]
 resolver = "2"
