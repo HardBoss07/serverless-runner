@@ -18,7 +18,7 @@ pub enum AppError {
     WasmEngine(String),
 
     #[error("Wasm execution failed (Code {0})")]
-    WasmExecution(i32),
+    WasmExecution(i32, String),
 
     #[error("Guest '{0}' not found on disk")]
     GuestNotFound(String),
@@ -39,11 +39,15 @@ impl IntoResponse for AppError {
             AppError::GuestNotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
             AppError::Sqlx(_) => (
                 StatusCode::SERVICE_UNAVAILABLE,
-                "Database is currently unavailable".into(),
+                "Database unavailable".into(),
             ),
-            AppError::WasmExecution(code) => (
+            AppError::WasmExecution(code, _) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Wasm exited with non-zero code: {}", code),
+                format!("Wasm exited with code {}", code),
+            ),
+            AppError::WasmEngine(ref msg) if msg.contains("Timeout") || msg.contains("fuel") => (
+                StatusCode::GATEWAY_TIMEOUT,
+                "Execution timed out".into(),
             ),
             _ => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
         };

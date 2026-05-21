@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 4. Wasmtime Engine
     let mut config = Config::new();
     config.async_support(true);
-    // config.consume_fuel(true);
+    config.consume_fuel(true);
     config.static_memory_maximum_size(64 * 1024 * 1024); // 64MB
 
     let wasm_engine = Engine::new(&config)?;
