@@ -33,5 +33,18 @@ services:
     volumes:
       - ./guests_compiled:/usr/app/guests_compiled
 
+  dev:
+    image: rust:1.85
+    container_name: serverless_dev
+    volumes:
+      - .:/usr/src/app
+    working_dir: /usr/src/app
+    command: sleep infinity
+    environment:
+      DATABASE_URL: postgres://platform_user:secret_password@db:5432/platform_db
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:
