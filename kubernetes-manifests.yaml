@@ -1,0 +1,167 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: serverless-platform
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: serverless-runner
+  namespace: serverless-platform
+  labels:
+    app: serverless-runner
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: serverless-runner
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: serverless-runner
+    spec:
+      # Synchronized with Rust graceful shutdown: 5s sleep + connection drain time
+      terminationGracePeriodSeconds: 45
+      containers:
+        - name: runner
+          image: serverless-runner:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DATABASE_URL
+              value: "postgres://user:pass@pgbouncer:5432/serverless_db"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 2
+            failureThreshold: 1 # Immediate failure on SIGTERM as per app logic
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: serverless-runner
+  namespace: serverless-platform
+spec:
+  selector:
+    app: serverless-runner
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: serverless-runner-hpa
+  namespace: serverless-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: serverless-runner
+  minReplicas: 3
+  maxReplicas: 50
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: serverless-ingress
+  namespace: serverless-platform
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    # Force least connections routing for serverless workloads
+    nginx.ingress.kubernetes.io/load-balance: "least_conn"
+    # Ensure buffer sizes are sufficient for long-running guest outputs
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+spec:
+  rules:
+    - host: api.serverless-runner.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: serverless-runner
+                port:
+                  number: 80
+---
+# PgBouncer: Connection Multiplexer
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer
+  namespace: serverless-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pgbouncer
+  template:
+    metadata:
+      labels:
+        app: pgbouncer
+    spec:
+      containers:
+        - name: pgbouncer
+          image: edoburu/pgbouncer:latest
+          ports:
+            - containerPort: 5432
+          env:
+            - name: DATABASE_URL
+              value: "postgres://user:pass@postgres-primary:5432/serverless_db"
+            - name: POOL_MODE
+              value: "transaction" # Best for serverless bursts
+            - name: MAX_CLIENT_CONN
+              value: "10000"
+            - name: DEFAULT_POOL_SIZE
+              value: "20"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbouncer
+  namespace: serverless-platform
+spec:
+  selector:
+    app: pgbouncer
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
