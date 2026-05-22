@@ -103,13 +103,18 @@ pub async fn run_wasm(
             // Check for exit status
             if let Some(exit) = e.downcast_ref::<wasmtime_wasi::I32Exit>() {
                 if exit.0 != 0 {
-                    return Err(serverless_core::AppError::WasmExecution(exit.0, stdout_string));
+                    return Err(serverless_core::AppError::WasmExecution(
+                        exit.0,
+                        stdout_string,
+                    ));
                 }
                 Ok((0, stdout_string))
             } else if error_string.contains("fuel") || error_string.contains("Fuel") {
                 Err(serverless_core::AppError::WasmEngine("Timeout".into()))
             } else if error_string.contains("memory") || error_string.contains("Memory") {
-                Err(serverless_core::AppError::WasmEngine("Memory limit exceeded".into()))
+                Err(serverless_core::AppError::WasmEngine(
+                    "Memory limit exceeded".into(),
+                ))
             } else {
                 Err(serverless_core::AppError::WasmEngine(format!("{:#}", e)))
             }

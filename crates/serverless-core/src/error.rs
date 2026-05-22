@@ -45,10 +45,9 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Wasm exited with code {}", code),
             ),
-            AppError::WasmEngine(ref msg) if msg.contains("Timeout") || msg.contains("fuel") => (
-                StatusCode::GATEWAY_TIMEOUT,
-                "Execution timed out".into(),
-            ),
+            AppError::WasmEngine(ref msg) if msg.contains("Timeout") || msg.contains("fuel") => {
+                (StatusCode::GATEWAY_TIMEOUT, "Execution timed out".into())
+            }
             _ => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
         };
 

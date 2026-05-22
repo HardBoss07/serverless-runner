@@ -79,7 +79,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_05_matrix_database_offline_503() {
-        // This test is hard to trigger without actually stopping DB, 
+        // This test is hard to trigger without actually stopping DB,
         // but we can verify the error mapping if we can force a failure.
         // For now, we skip or assume DB is up.
     }
@@ -200,7 +200,11 @@ mod tests {
 
         let status = response.status();
         let text = response.text().await.unwrap().to_lowercase();
-        assert!(text.contains("permission denied") || text.contains("no such file") || status.is_server_error());
+        assert!(
+            text.contains("permission denied")
+                || text.contains("no such file")
+                || status.is_server_error()
+        );
     }
 
     #[tokio::test]
@@ -238,7 +242,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
         let text = response.text().await.unwrap().to_lowercase();
-        assert!(text.contains("out of bounds") || text.contains("memory limit exceeded") || text.contains("unreachable"));
+        assert!(
+            text.contains("out of bounds")
+                || text.contains("memory limit exceeded")
+                || text.contains("unreachable")
+        );
     }
 
     #[tokio::test]
