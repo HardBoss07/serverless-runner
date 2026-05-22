@@ -1,0 +1,81 @@
+# Architecture and Containerization
+
+This document details the system architecture of the Serverless Runner, its multi-stage build process, and the orchestration of its containerized components.
+
+## System Architecture
+
+The project is structured as a Rust workspace with two primary internal crates and a suite of Wasm guests.
+
+### 1. Workspace Structure
+
+| Component | Responsibility | Key Technologies |
+| :--- | :--- | :--- |
+| `serverless-core` | Shared domain logic, database models, and error handling. | `sqlx`, `serde` |
+| `serverless-runner` | HTTP API and WebAssembly execution engine. | `axum`, `wasmtime`, `tokio` |
+| `guests/` | Source code for Wasm modules (WASI-compliant). | `rust`, `wasm32-wasip1` |
+| `tests/` | Integration tests verifying the full containerized loop. | `reqwest`, `sqlx` |
+
+### 2. Execution Flow
+
+The runner follows a **Log-and-Update** pattern for execution observability:
+
+1.  **API Ingress:** The `serverless-runner` receives a POST request at `/execute/{function_name}`.
+2.  **Pre-check:** Validates that the `.wasm` file exists on disk. If missing, returns `404 Not Found` without logging to the DB.
+3.  **Persistence (Start):** `serverless-core` inserts a record into the `executions` table, generating a unique UUID.
+4.  **Wasm Invocation:** The execution engine loads the module, configures WASI (with isolated pipes and memory limits), and executes the code.
+5.  **Persistence (End):**
+    - **Success:** Updates the record with `status_code`, a snippet of `stdout` (up to 2048 chars), and `duration_ms`.
+    - **Failure:** Updates the record with the `error_message` or specific exit code.
+6.  **Response:** Returns the guest's `stdout` or an error JSON to the client.
+
+---
+
+## Containerization
+
+The project uses Docker for environment consistency, ensuring that the Wasm modules are built and executed in an environment identical to production.
+
+### Dockerfile (Multi-stage Build)
+
+The `Dockerfile` is optimized for build speed and small runtime images:
+
+- **Stage 1 (Builder):**
+  - Uses `rust:1.85-slim-bookworm`.
+  - Installs compilation dependencies (`pkg-config`, `libssl-dev`, etc.).
+  - Builds the `serverless-runner` binary in release mode.
+  - Adds the `wasm32-wasip1` target.
+  - Compiles all guests in a single workspace-level Cargo invocation.
+  - Aggregates `.wasm` files into a `guests_compiled/` directory.
+- **Stage 2 (Runtime):**
+  - Uses `debian:bookworm-slim`.
+  - Copies only the runner binary and the compiled Wasm modules.
+  - Exposes port `8080`.
+
+### Docker Compose Orchestration
+
+The `docker-compose.yml` defines three services:
+
+1.  **`db`:** PostgreSQL 16. Uses `db/schema.sql` for initial initialization.
+2.  **`runner`:** The production-like environment running the `serverless-runner`.
+3.  **`dev`:** A persistent Rust environment used for development and running integration tests.
+
+> **Note:** All tests MUST be run from within the `dev` container using `docker compose exec dev cargo test`.
+
+---
+
+## Database Lifecycle
+
+The database schema is managed via `sqlx` migrations and a static `schema.sql`.
+
+### Table: `executions`
+
+| Column | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `UUID` | Primary key (auto-generated). |
+| `function_name` | `VARCHAR` | The name of the guest invoked. |
+| `status_code` | `INTEGER` | The exit code (0 for success, non-zero for panic/errors). |
+| `stdout_snippet` | `TEXT` | Truncated output from the guest (max 2048 chars). |
+| `duration_ms` | `BIGINT` | Total wall-clock time of execution. |
+| `error_message` | `TEXT` | Detailed error if execution failed before or during Wasm run. |
+| `created_at` | `TIMESTAMPTZ` | Timestamp of execution start. |
+
+Indices are applied to `function_name` and `created_at` to ensure high-performance observability queries.
