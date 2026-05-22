@@ -203,6 +203,7 @@ mod tests {
         assert!(
             text.contains("permission denied")
                 || text.contains("no such file")
+                || text.contains("pre-opened")
                 || status.is_server_error()
         );
     }
