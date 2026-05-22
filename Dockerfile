@@ -18,6 +18,7 @@ COPY guests/ ./guests/
 COPY tests/ ./tests/
 
 # Build the runner and guests
+ENV SQLX_OFFLINE=true
 RUN mkdir -p guests_compiled && \
     # 1. Build the host runner
     cargo build --release -p serverless-runner && \
