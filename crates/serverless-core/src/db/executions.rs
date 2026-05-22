@@ -3,14 +3,16 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 pub async fn log_execution_start(pool: &PgPool, function_name: &str) -> AppResult<Uuid> {
-    let row = sqlx::query!(
-        "INSERT INTO executions (function_name) VALUES ($1) RETURNING id",
+    let id = Uuid::now_v7();
+    sqlx::query!(
+        "INSERT INTO executions (id, function_name) VALUES ($1, $2)",
+        id,
         function_name
     )
-    .fetch_one(pool)
+    .execute(pool)
     .await?;
 
-    Ok(row.id)
+    Ok(id)
 }
 
 pub async fn complete_execution(

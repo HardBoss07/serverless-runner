@@ -9,7 +9,7 @@ The database must be initialized using the following script.
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE executions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY,
     function_name VARCHAR(255) NOT NULL,
     status_code INTEGER,
     stdout_snippet TEXT,
@@ -54,8 +54,8 @@ Wasm executions are non-atomic with respect to the database. We follow a "Log-an
 
 1. **The Entry Call:**
    - Function: `log_execution_start`.
-   - Action: `INSERT` with `function_name` and `created_at`.
-   - Result: Returns a `UUID` to be used for the duration of the request.
+   - Action: Generates a UUIDv7 and `INSERT` with `id`, `function_name` and `created_at`.
+   - Result: Returns the generated `UUID` to be used for the duration of the request.
 2. **The Result Call:**
    - Function: `complete_execution`.
    - Action: `UPDATE` by `id`.
