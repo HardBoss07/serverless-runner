@@ -17,7 +17,7 @@ pub enum AppError {
     #[error("Wasm engine error: {0}")]
     WasmEngine(String),
 
-    #[error("Wasm execution failed (Code {0})")]
+    #[error("Wasm exited with code {0}")]
     WasmExecution(i32, String),
 
     #[error("Guest '{0}' not found on disk")]

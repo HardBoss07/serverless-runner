@@ -19,6 +19,7 @@ pub async fn complete_execution(
     code: i32,
     stdout: String,
     duration: i64,
+    error_message: Option<String>,
 ) -> AppResult<()> {
     // We only store the first 2048 characters of stdout
     let stdout_snippet = if stdout.len() > 2048 {
@@ -27,13 +28,14 @@ pub async fn complete_execution(
         &stdout
     };
 
-    sqlx::query!(
-        "UPDATE executions SET status_code = $1, stdout_snippet = $2, duration_ms = $3 WHERE id = $4",
-        code,
-        stdout_snippet,
-        duration,
-        id
+    sqlx::query(
+        "UPDATE executions SET status_code = $1, stdout_snippet = $2, duration_ms = $3, error_message = $4 WHERE id = $5"
     )
+    .bind(code)
+    .bind(stdout_snippet)
+    .bind(duration)
+    .bind(error_message)
+    .bind(id)
     .execute(pool)
     .await?;
 
