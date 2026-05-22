@@ -1,0 +1,259 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: serverless-platform
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: runner-secrets
+  namespace: serverless-platform
+type: Opaque
+stringData:
+  # Multi-shard connection strings (comma-separated)
+  DATABASE_URLS: "postgres://platform_user:secret_password@pgbouncer-shard-1:5432/platform_db,postgres://platform_user:secret_password@pgbouncer-shard-2:5432/platform_db"
+  PORT: "8080"
+  RUST_LOG: "info"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: serverless-runner
+  namespace: serverless-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: serverless-runner
+  template:
+    metadata:
+      labels:
+        app: serverless-runner
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: runner
+          image: serverless-runner:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: runner-secrets
+          resources:
+            requests:
+              cpu: "100m" # Low baseline to trigger HPA quickly in local testing
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: serverless-runner
+  namespace: serverless-platform
+spec:
+  selector:
+    app: serverless-runner
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: serverless-runner-hpa
+  namespace: serverless-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: serverless-runner
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50 # Lower threshold for easier local testing
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: serverless-ingress
+  namespace: serverless-platform
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/load-balance: "least_conn"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: serverless-runner
+                port:
+                  number: 80
+---
+# Database Shard 1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-shard-1
+  namespace: serverless-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-shard-1
+  template:
+    metadata:
+      labels:
+        app: postgres-shard-1
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          env:
+            - name: POSTGRES_USER
+              value: platform_user
+            - name: POSTGRES_PASSWORD
+              value: secret_password
+            - name: POSTGRES_DB
+              value: platform_db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-shard-1
+  namespace: serverless-platform
+spec:
+  selector:
+    app: postgres-shard-1
+  ports:
+    - port: 5432
+---
+# PgBouncer Shard 1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer-shard-1
+  namespace: serverless-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgbouncer-shard-1
+  template:
+    metadata:
+      labels:
+        app: pgbouncer-shard-1
+    spec:
+      containers:
+        - name: pgbouncer
+          image: edoburu/pgbouncer:latest
+          env:
+            - name: DATABASE_URL
+              value: "postgres://platform_user:secret_password@postgres-shard-1:5432/platform_db"
+            - name: POOL_MODE
+              value: transaction
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbouncer-shard-1
+  namespace: serverless-platform
+spec:
+  selector:
+    app: pgbouncer-shard-1
+  ports:
+    - port: 5432
+---
+# Database Shard 2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-shard-2
+  namespace: serverless-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-shard-2
+  template:
+    metadata:
+      labels:
+        app: postgres-shard-2
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          env:
+            - name: POSTGRES_USER
+              value: platform_user
+            - name: POSTGRES_PASSWORD
+              value: secret_password
+            - name: POSTGRES_DB
+              value: platform_db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-shard-2
+  namespace: serverless-platform
+spec:
+  selector:
+    app: postgres-shard-2
+  ports:
+    - port: 5432
+---
+# PgBouncer Shard 2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer-shard-2
+  namespace: serverless-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgbouncer-shard-2
+  template:
+    metadata:
+      labels:
+        app: pgbouncer-shard-2
+    spec:
+      containers:
+        - name: pgbouncer
+          image: edoburu/pgbouncer:latest
+          env:
+            - name: DATABASE_URL
+              value: "postgres://platform_user:secret_password@postgres-shard-2:5432/platform_db"
+            - name: POOL_MODE
+              value: transaction
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbouncer-shard-2
+  namespace: serverless-platform
+spec:
+  selector:
+    app: pgbouncer-shard-2
+  ports:
+    - port: 5432
