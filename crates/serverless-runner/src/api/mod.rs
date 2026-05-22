@@ -89,9 +89,15 @@ pub async fn execute_function(
     // 3. Complete or log error
     match run_result {
         Ok((code, stdout)) => {
-            if let Err(e) =
-                db::complete_execution(&state.db_pool, execution_id, code, stdout.clone(), duration)
-                    .await
+            if let Err(e) = db::complete_execution(
+                &state.db_pool,
+                execution_id,
+                code,
+                stdout.clone(),
+                duration,
+                None,
+            )
+            .await
             {
                 tracing::error!("Failed to complete execution log: {}", e);
             }
@@ -105,6 +111,7 @@ pub async fn execute_function(
                     code,
                     stdout.clone(),
                     duration,
+                    Some(e.to_string()),
                 )
                 .await
                 {
