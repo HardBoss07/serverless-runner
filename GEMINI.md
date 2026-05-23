@@ -5,7 +5,8 @@
 - [x] Phase 1: Ingestion & Workspace Prep
 - [x] Phase 2: Core Domain Implementation (serverless-core)
 - [x] Phase 3: Runner Engine & API (serverless-runner)
-- [ ] Phase 4: Containerization & Integration
+- [x] Phase 4: Containerization & Integration
+- [ ] Phase 5: Performance Tuning & Scaling
 
 ## CRITICAL RULES
 
@@ -30,7 +31,12 @@
 - Database schema and migrations implemented.
 - serverless-core implemented (errors, models, db logic).
 - serverless-runner implemented (Axum API, Wasmtime execution engine).
+- **Kubernetes Deployment:** Full stack (NGINX Ingress, Runner, PgBouncer, Multi-shard Postgres) implemented and stable in Kind.
+- **Automation:** Added `redeploy-cluster.ps1` and `validate-all.ps1` for rapid iteration and system verification.
+- **Stability:** Fixed PgBouncer connection issues by disabling statement caching and tuning K8s probes.
 
 ## Next Steps
 
-- Implement integration testing and full loop validation.
+- **Metrics-Server:** Install in cluster to enable `kubectl top` and verify Horizontal Pod Autoscaler (HPA).
+- **1000 RPS Goal:** Tune configuration and resources to handle 1000 Requests Per Second locally with no dropped requests.
+- **Observability:** Integrate structured logging and tracing for better bottleneck analysis.

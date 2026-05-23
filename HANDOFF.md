@@ -2,29 +2,30 @@
 
 ## Goal
 To provide a high-performance, sandboxed serverless execution platform using Rust, Axum, Wasmtime (WASI), and PostgreSQL.
+**Long-term Goal:** Achieve 1000 RPS locally with 0.0% dropped requests and consistent performance.
 
 ## Current State
 - **Workspace:** Cargo Workspace with `serverless-runner`, `serverless-core`, `tests`, and guest functions.
-- **Core:** Implemented database schema (PostgreSQL), DB pooling, error handling, and modular execution logic.
-- **Runner Engine:** Axum API and Wasmtime (WASI) orchestration engine implemented with proper piping and CLI support (using `clap`).
-- **Sandbox Hardening:** Implemented resource constraints including fuel limits (CPU) and memory caps (64MB) using Wasmtime's `StoreLimits` and `ResourceLimiter`.
-- **Infrastructure:** Dockerized setup using `docker-compose`. Schema is automatically initialized via `/docker-entrypoint-initdb.d`.
-- **Testing:** Integration suite implemented in `tests/` using `reqwest`. 22/24 tests are passing, verifying success, failure, and security isolation (FS, Net, Env).
-- **Status:** Functional platform executing Wasm guests with enforced resource limits and security sandboxing.
+- **Infrastructure (K8s):** Fully containerized stack deployed via Kind. Includes NGINX Ingress, Axum Runners (3 replicas), PgBouncer (sharded), and PostgreSQL (multi-shard).
+- **Core Logic:** Multi-pool database sharding with `sqlx`. Log-and-Update pattern for execution metrics.
+- **Runner Engine:** Wasmtime (WASI) orchestration with fuel-based CPU limits and 64MB memory caps per guest.
+- **Automation:** 
+    - `redeploy-cluster.ps1`: Rapid full-stack redeployment with readiness synchronization.
+    - `validate-all.ps1`: Comprehensive validation loop (Pod health -> DB connectivity -> API Sanity -> Stress Test).
+- **Stability:** Resolved PgBouncer statement caching conflicts and tuned Kubernetes probes for robust startup.
 
 ## Files Actively Involved
-- `crates/serverless-runner/src/engine/mod.rs`: WASI piping, fuel management, and `ResourceLimiter` implementation.
-- `crates/serverless-core/src/error.rs`: Expanded `AppError` to capture failure context (exit codes + stdout).
-- `crates/serverless-runner/src/api/mod.rs`: Updated error handling to log non-zero exit codes to the database.
-- `tests/src/lib.rs`: Automated integration test suite with flexible assertions for sandbox violations.
+- `k8s-manifests.yaml`: Kubernetes resource definitions (Deployments, Services, ConfigMaps, Secrets, HPA, Ingress).
+- `validate-all.ps1` & `redeploy-cluster.ps1`: Primary automation and validation scripts.
+- `crates/serverless-runner/src/main.rs`: Multi-shard pool initialization and API routing.
+- `crates/serverless-core/src/db/executions.rs`: Shard-aware execution logging.
 
 ## Investigation History & Learnings
-- **Trap vs Exit:** Wasmtime traps (e.g., fuel exhaustion, memory bounds) require specific downcasting or string-matching to map to HTTP 504/500, whereas WASI `proc_exit` (exit code 101) is an `I32Exit` error that should be logged as a completed execution with the code preserved.
-- **Tooling:** Standardized on `wasm32-wasip1` for guest compilation.
-- **Wasmtime API:** Standardized on v26.0.0; requires custom `HostState` for advanced resource limiting.
-- **Performance:** Fuel consumption successfully mitigates infinite loops without blocking the host's `tokio` runtime.
+- **PgBouncer & SQLx:** PgBouncer in `transaction` mode is incompatible with SQLx's default prepared statement caching. Fixed by adding `statement_cache_capacity=0` to connection strings.
+- **K8s Startup Race:** Initial liveness/readiness failures were due to runners trying to connect to databases before PgBouncer or Postgres were fully initialized. Increased `initialDelaySeconds` and added `failureThreshold` to stabilize.
+- **Kind Ingress:** Required specific `extraPortMappings` and `node-labels` in `kind-config.yaml` to route host traffic through the NGINX ingress controller.
 
 ## Next Steps
-1. **Dependency Resolution:** Add `anyhow` to `serverless-runner` to fix compilation errors introduced by the `ResourceLimiter` trait implementation.
-2. **Final Verification:** Fix `test_17` (Memory limit message matching) and `test_22` (Error logging logic) to reach 100% test coverage.
-3. **Refactoring:** Consolidate the "Log-and-Update" pattern to ensure consistency between the HTTP response and the database record under all failure modes.
+1. **Metrics Integration:** Deploy `metrics-server` to the cluster to enable HPA and `kubectl top`.
+2. **Performance Tuning:** Optimize thread counts, connection pools, and Wasm pre-compilation to reach the 1000 RPS target.
+3. **Distribution Tuning:** Monitor DB shard distribution under heavy load and adjust sharding logic if hot-spotting occurs.
