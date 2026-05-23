@@ -77,15 +77,19 @@ pub async fn execute_function(
     // We'll use the execution ID (UUIDv7) to select the pool
     // 1. Log execution start on a selected shard
     let shard_count = state.db_pools.len();
-    
-    // We first need to generate the execution_id to decide the shard, 
-    // but db::log_execution_start generates it. 
-    // Let's modify the approach: we'll pick a shard based on the function name hash 
-    // or just round-robin/random if we want pure distribution. 
-    // The prompt mentions "Rust UUIDv7 hashing logic", so let's use a random shard 
+
+    // We first need to generate the execution_id to decide the shard,
+    // but db::log_execution_start generates it.
+    // Let's modify the approach: we'll pick a shard based on the function name hash
+    // or just round-robin/random if we want pure distribution.
+    // The prompt mentions "Rust UUIDv7 hashing logic", so let's use a random shard
     // since UUIDv7s are generated in the DB usually.
     // Actually, let's pick shard based on a hash of the current time/request to distribute.
-    let shard_index = (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos() % shard_count as u128) as usize;
+    let shard_index = (std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos()
+        % shard_count as u128) as usize;
     let db_pool = &state.db_pools[shard_index];
 
     let execution_id = match db::log_execution_start(db_pool, &function_name).await {
@@ -95,29 +99,35 @@ pub async fn execute_function(
 
     let start_time = Instant::now();
 
-    // 2. Run Wasm
-    let run_result = run_wasm(&state.wasm_engine, wasm_path, input).await;
+    // 2. Run Wasm on a blocking thread to prevent async starvation
+    let engine_clone = state.wasm_engine.clone();
+    let wasm_path_clone = wasm_path.clone();
+    let input_clone = input.clone();
+
+    let run_result = match tokio::task::spawn_blocking(move || {
+        let handle = tokio::runtime::Handle::current();
+        handle.block_on(async move { run_wasm(&engine_clone, wasm_path_clone, input_clone).await })
+    })
+    .await
+    {
+        Ok(res) => res,
+        Err(e) => return serverless_core::AppError::WasmEngine(e.to_string()).into_response(),
+    };
 
     let duration = start_time.elapsed().as_millis() as i64;
 
     // 3. Complete or log error on the SAME shard
     match run_result {
         Ok((code, stdout)) => {
-            if let Err(e) = db::complete_execution(
-                db_pool,
-                execution_id,
-                code,
-                stdout.clone(),
-                duration,
-                None,
-            )
-            .await
+            if let Err(e) =
+                db::complete_execution(db_pool, execution_id, code, stdout.clone(), duration, None)
+                    .await
             {
                 tracing::error!("Failed to complete execution log: {}", e);
             }
             stdout.into_response()
         }
-// ... (rest of the error handling remains similar but using db_pool)
+        // ... (rest of the error handling remains similar but using db_pool)
         Err(e) => {
             if let serverless_core::AppError::WasmExecution(code, ref stdout) = e {
                 if let Err(db_err) = db::complete_execution(
