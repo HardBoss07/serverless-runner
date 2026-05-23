@@ -42,12 +42,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
 
     // 3. Database Pools (Multi-shard support)
-    let database_urls = env::var("DATABASE_URLS").unwrap_or_else(|_| env::var("DATABASE_URL").expect("DATABASE_URL or DATABASE_URLS must be set"));
+    let database_urls = env::var("DATABASE_URLS").unwrap_or_else(|_| {
+        env::var("DATABASE_URL").expect("DATABASE_URL or DATABASE_URLS must be set")
+    });
     let mut db_pools = Vec::new();
 
     for url in database_urls.split(',') {
         let pool = PgPoolOptions::new()
-            .max_connections(20)
+            .max_connections(50) // Increased for higher concurrency
             .connect(url.trim())
             .await?;
         db_pools.push(pool);
@@ -88,7 +90,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/ready", get(readiness_handler))
         .route("/live", get(|| async { "OK" }))
-        .route("/execute/{function_name}", get(api::execute_function).post(api::execute_function))
+        .route(
+            "/execute/{function_name}",
+            get(api::execute_function).post(api::execute_function),
+        )
         .with_state(app_state)
         .layer(axum::extract::Extension(server_state));
 
