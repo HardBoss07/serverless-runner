@@ -47,7 +47,7 @@ metadata:
   name: serverless-runner
   namespace: serverless-platform
 spec:
-  replicas: 3
+  replicas: 32 # Scaled to match Ryzen 9 5950X logical thread count
   selector:
     matchLabels:
       app: serverless-runner
@@ -68,24 +68,26 @@ spec:
                 name: runner-secrets
           resources:
             requests:
-              cpu: "100m" # Low baseline to trigger HPA quickly in local testing
-              memory: "128Mi"
-            limits:
               cpu: "500m"
               memory: "512Mi"
+            limits:
+              cpu: "2000m" # Allow burst into SMT threads
+              memory: "1Gi"
           readinessProbe:
             httpGet:
               path: /ready
               port: 8080
             initialDelaySeconds: 15
             periodSeconds: 10
-            failureThreshold: 5
+            failureThreshold: 3
+            timeoutSeconds: 5
           livenessProbe:
             httpGet:
               path: /live
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 20
+            failureThreshold: 3
             timeoutSeconds: 5
 ---
 apiVersion: v1
@@ -111,15 +113,15 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: serverless-runner
-  minReplicas: 3
-  maxReplicas: 10
+  minReplicas: 8
+  maxReplicas: 32 # Match logical thread count
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 50 # Lower threshold for easier local testing
+          averageUtilization: 80
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -158,6 +160,10 @@ spec:
       containers:
         - name: postgres
           image: postgres:16
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
           env:
             - name: POSTGRES_USER
               value: platform_user
@@ -211,6 +217,12 @@ spec:
               value: "postgres://platform_user:secret_password@postgres-shard-1:5432/platform_db"
             - name: POOL_MODE
               value: transaction
+            - name: MAX_CLIENT_CONN
+              value: "5000"
+            - name: DEFAULT_POOL_SIZE
+              value: "100"
+            - name: MIN_POOL_SIZE
+              value: "20"
 ---
 apiVersion: v1
 kind: Service
@@ -242,6 +254,10 @@ spec:
       containers:
         - name: postgres
           image: postgres:16
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
           env:
             - name: POSTGRES_USER
               value: platform_user
@@ -295,6 +311,12 @@ spec:
               value: "postgres://platform_user:secret_password@postgres-shard-2:5432/platform_db"
             - name: POOL_MODE
               value: transaction
+            - name: MAX_CLIENT_CONN
+              value: "5000"
+            - name: DEFAULT_POOL_SIZE
+              value: "100"
+            - name: MIN_POOL_SIZE
+              value: "20"
 ---
 apiVersion: v1
 kind: Service
