@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/ready", get(readiness_handler))
         .route("/live", get(|| async { "OK" }))
-        .route("/execute/{function_name}", post(api::execute_function))
+        .route("/execute/{function_name}", get(api::execute_function).post(api::execute_function))
         .with_state(app_state)
         .layer(axum::extract::Extension(server_state));
 

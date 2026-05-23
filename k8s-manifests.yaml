@@ -4,6 +4,30 @@ metadata:
   name: serverless-platform
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-schema
+  namespace: serverless-platform
+data:
+  init.sql: |
+    -- Initial migration
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    
+    CREATE TABLE executions (
+        id UUID PRIMARY KEY,
+        function_name VARCHAR(255) NOT NULL,
+        status_code INTEGER,
+        stdout_snippet TEXT,
+        duration_ms BIGINT,
+        error_message TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    
+    -- Indexing for observability and dashboard performance
+    CREATE INDEX idx_executions_function_name ON executions(function_name);
+    CREATE INDEX idx_executions_created_at ON executions(created_at DESC);
+---
+apiVersion: v1
 kind: Secret
 metadata:
   name: runner-secrets
@@ -11,9 +35,11 @@ metadata:
 type: Opaque
 stringData:
   # Multi-shard connection strings (comma-separated)
-  DATABASE_URLS: "postgres://platform_user:secret_password@pgbouncer-shard-1:5432/platform_db,postgres://platform_user:secret_password@pgbouncer-shard-2:5432/platform_db"
+  # Added statement_cache_capacity=0 and sslmode=disable for PgBouncer/stability
+  DATABASE_URLS: "postgres://platform_user:secret_password@pgbouncer-shard-1:5432/platform_db?statement_cache_capacity=0&sslmode=disable,postgres://platform_user:secret_password@pgbouncer-shard-2:5432/platform_db?statement_cache_capacity=0&sslmode=disable"
   PORT: "8080"
   RUST_LOG: "info"
+  WASM_STORAGE_DIR: "/usr/app/guests_compiled"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -51,11 +77,16 @@ spec:
             httpGet:
               path: /ready
               port: 8080
-            initialDelaySeconds: 5
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 5
           livenessProbe:
             httpGet:
               path: /live
               port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
 ---
 apiVersion: v1
 kind: Service
@@ -95,10 +126,8 @@ kind: Ingress
 metadata:
   name: serverless-ingress
   namespace: serverless-platform
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/load-balance: "least_conn"
 spec:
+  ingressClassName: nginx
   rules:
     - http:
         paths:
@@ -136,6 +165,16 @@ spec:
               value: secret_password
             - name: POSTGRES_DB
               value: platform_db
+            - name: POSTGRES_HOST_AUTH_METHOD
+              value: trust
+          volumeMounts:
+            - name: db-init-script
+              mountPath: /docker-entrypoint-initdb.d/init.sql
+              subPath: init.sql
+      volumes:
+        - name: db-init-script
+          configMap:
+            name: db-schema
 ---
 apiVersion: v1
 kind: Service
@@ -210,6 +249,16 @@ spec:
               value: secret_password
             - name: POSTGRES_DB
               value: platform_db
+            - name: POSTGRES_HOST_AUTH_METHOD
+              value: trust
+          volumeMounts:
+            - name: db-init-script
+              mountPath: /docker-entrypoint-initdb.d/init.sql
+              subPath: init.sql
+      volumes:
+        - name: db-init-script
+          configMap:
+            name: db-schema
 ---
 apiVersion: v1
 kind: Service
