@@ -1,9 +1,9 @@
 #!/usr/bin/env pwsh
 
-Write-Host "--- Starting Load Test (2 minutes) ---" -ForegroundColor Cyan
+Write-Host "--- Starting Load Test (5 minutes) ---" -ForegroundColor Cyan
 Write-Host "Monitoring HPA in another window is recommended: 'kubectl get hpa -n serverless-platform -w'" -ForegroundColor Gray
 
-oha -z 2m -c 100 "http://localhost/execute/fibonacci?number=15"
+oha -z 5m -c 250 "http://localhost/execute/fibonacci?number=15"
 
 Write-Host "--- Load Test Finished ---" -ForegroundColor Green
 Write-Host "--- Verification: Database Row Counts ---" -ForegroundColor Cyan
