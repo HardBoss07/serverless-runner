@@ -63,7 +63,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let wasm_engine = Engine::new(&config)?;
 
-    // 5. App State
+    // 5. Batcher for execution logs
+    let batcher = engine::batcher::Batcher::new(
+        db_pools.clone(),
+        100,                                   // Batch size
+        std::time::Duration::from_millis(200), // Flush interval
+    );
+
+    // 6. App State
     let guest_path = PathBuf::from(
         env::var("WASM_STORAGE_DIR").unwrap_or_else(|_| "./guests_compiled".to_string()),
     );
@@ -79,6 +86,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db_pools,
         wasm_engine,
         guest_path,
+        batcher,
+        module_cache: dashmap::DashMap::new(),
     });
 
     let server_state = Arc::new(ServerState {
