@@ -6,7 +6,7 @@
 - [x] Phase 2: Core Domain Implementation (serverless-core)
 - [x] Phase 3: Runner Engine & API (serverless-runner)
 - [x] Phase 4: Containerization & Integration
-- [ ] Phase 5: Performance Tuning & Scaling
+- [x] Phase 5: Performance Tuning & Scaling
 
 ## CRITICAL RULES
 
@@ -19,9 +19,9 @@
 # Decisions & Rules
 
 - **Error Handling:** Use `AppError` and `AppResult` from `serverless-core`.
-- **Wasm Runtime:** Wasmtime with `async` support.
+- **Wasm Runtime:** Wasmtime with `async` support and **Module Caching (DashMap)**.
 - **Communication:** `stdin`/`stdout` memory pipes.
-- **Database:** PostgreSQL with `sqlx`. Log-and-Update pattern.
+- **Database:** PostgreSQL with `sqlx`. **Async Micro-Batching (MPSC + UNNEST)**.
 - **Formatting:** `cargo fmt` after changes.
 
 ## Current State
@@ -34,10 +34,9 @@
 - **Kubernetes Deployment:** Full stack (NGINX Ingress, Runner, PgBouncer, Multi-shard Postgres) implemented and stable in Kind.
 - **Automation:** Added `redeploy-cluster.ps1` and `validate-all.ps1` for rapid iteration and system verification.
 - **Stability:** Fixed PgBouncer connection issues by disabling statement caching and tuning K8s probes.
-- **Documentation:** Created `docs/07_High_Throughput_Architecture_and_Benchmarks.md` with principal-level analysis and Mermaid diagrams.
+- **Documentation:** Created `docs/07_High_Throughput_Architecture_and_Benchmarks.md` and **`docs/08_Ultra_High_Throughput_Optimization_Report.md`** (achieving ~15,000 RPS).
 
 ## Next Steps
 
-- **Metrics-Server:** Install in cluster to enable `kubectl top` and verify Horizontal Pod Autoscaler (HPA).
-- **1000 RPS Goal:** Tune configuration and resources to handle 1000 Requests Per Second locally with no dropped requests.
 - **Observability:** Integrate structured logging and tracing for better bottleneck analysis.
+- **Cost Analysis:** Analyze resource usage per execution to optimize K8s resource requests/limits.

@@ -20,6 +20,7 @@ serverless-runner/
 │       │   ├── api/
 │       │   │   └── mod.rs
 │       │   ├── engine/
+│       │   │   ├── batcher.rs
 │       │   │   └── mod.rs
 │       │   ├── main.rs
 │       │   └── state.rs
@@ -43,7 +44,8 @@ serverless-runner/
 │   ├── 04_Runner_Engine_Technical_Spec.md
 │   ├── 05_Guest_Development_Kit.md
 │   ├── 06_Integration_Testing_Playbook.md
-│   └── 07_High_Throughput_Architecture_and_Benchmarks.md
+│   ├── 07_High_Throughput_Architecture_and_Benchmarks.md
+│   └── 08_Ultra_High_Throughput_Optimization_Report.md
 ├── guests/
 │   ├── env-reader/
 │   │   ├── src/
@@ -104,6 +106,7 @@ serverless-runner/
 ├── kubernetes-manifests.yaml
 ├── redeploy-cluster.ps1
 ├── run-benchmark.ps1
+├── run-extensive-stress-test.ps1
 ├── run-stress-test.ps1
 ├── run-test.ps1
 ├── update-cluster.ps1
