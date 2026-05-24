@@ -34,6 +34,7 @@
 - **Kubernetes Deployment:** Full stack (NGINX Ingress, Runner, PgBouncer, Multi-shard Postgres) implemented and stable in Kind.
 - **Automation:** Added `redeploy-cluster.ps1` and `validate-all.ps1` for rapid iteration and system verification.
 - **Stability:** Fixed PgBouncer connection issues by disabling statement caching and tuning K8s probes.
+- **Documentation:** Created `docs/07_High_Throughput_Architecture_and_Benchmarks.md` with principal-level analysis and Mermaid diagrams.
 
 ## Next Steps
 

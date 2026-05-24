@@ -27,6 +27,11 @@ serverless-runner/
 ├── db/
 │   └── schema.sql
 ├── docs/
+│   ├── test_results/
+│   │   ├── final_test_results.txt
+│   │   ├── hello_test_results.txt
+│   │   ├── live_test_results.txt
+│   │   └── test_results.txt
 │   ├── v2_reference/
 │   │   ├── 00_Index_and_Overview.md
 │   │   ├── 01_Architecture_and_Containerization.md
@@ -37,7 +42,8 @@ serverless-runner/
 │   ├── 03_Core_Crate_Deep_Dive.md
 │   ├── 04_Runner_Engine_Technical_Spec.md
 │   ├── 05_Guest_Development_Kit.md
-│   └── 06_Integration_Testing_Playbook.md
+│   ├── 06_Integration_Testing_Playbook.md
+│   └── 07_High_Throughput_Architecture_and_Benchmarks.md
 ├── guests/
 │   ├── env-reader/
 │   │   ├── src/
@@ -97,6 +103,7 @@ serverless-runner/
 ├── kind-config.yaml
 ├── kubernetes-manifests.yaml
 ├── redeploy-cluster.ps1
+├── run-benchmark.ps1
 ├── run-stress-test.ps1
 ├── run-test.ps1
 ├── update-cluster.ps1
