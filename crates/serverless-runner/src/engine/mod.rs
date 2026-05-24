@@ -1,3 +1,5 @@
+pub mod batcher;
+
 use serverless_core::AppResult;
 use std::path::PathBuf;
 use wasmtime::{Engine, Linker, Module, ResourceLimiter, Store, StoreLimits, StoreLimitsBuilder};
@@ -30,15 +32,7 @@ impl ResourceLimiter for HostState {
     }
 }
 
-pub async fn run_wasm(
-    engine: &Engine,
-    wasm_path: PathBuf,
-    input: Vec<u8>,
-) -> AppResult<(i32, String)> {
-    // 1. Module Load
-    let module = Module::from_file(engine, &wasm_path)
-        .map_err(|e| serverless_core::AppError::CompileError(e.to_string()))?;
-
+pub async fn run_wasm(engine: &Engine, module: Module, input: Vec<u8>) -> AppResult<(i32, String)> {
     // 2. WASI Configuration with Memory Pipes
     let stdout_pipe = MemoryOutputPipe::new(1024 * 1024); // 1MB buffer
     let stdin_pipe = MemoryInputPipe::new(input);
