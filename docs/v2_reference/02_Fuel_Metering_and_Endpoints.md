@@ -45,11 +45,13 @@ store.set_fuel(100_000_000);
 The fuel consumption is calculated based on the instruction count of the Wasm module during execution.
 
 #### 1. Initial Budget
+
 The total budget $F_{total}$ is fixed at 100 million units.
 
 $$F_{total} = 100,000,000$$
 
 #### 2. Consumption Model
+
 As the Wasm Virtual Machine executes instructions, the remaining fuel $F_{remaining}$ is decremented. The cost of an instruction $c(i)$ is determined by the `wasmtime` compiler (typically 1 unit per basic instruction).
 
 The fuel consumed $F_{consumed}$ after $N$ instructions is:
@@ -57,6 +59,7 @@ The fuel consumed $F_{consumed}$ after $N$ instructions is:
 $$F_{consumed} = \sum_{n=1}^{N} c(i_n)$$
 
 #### 3. Termination Condition
+
 The execution is allowed to continue as long as the remaining fuel is non-negative:
 
 $$F_{remaining} = F_{total} - F_{consumed} \ge 0$$
@@ -69,12 +72,12 @@ If $F_{consumed} > F_{total}$, the `wasmtime` engine triggers a **Fuel Trap**, w
 
 While fuel controls CPU usage, other resources are strictly limited to ensure total sandbox isolation:
 
-| Resource | Limit | Mechanism |
-| :--- | :--- | :--- |
-| **Memory** | 64 MB | `StoreLimits` / `ResourceLimiter` |
-| **Stdout Buffer** | 1 MB | `MemoryOutputPipe` |
-| **Instances** | 1 | `StoreLimits` (per request) |
-| **Wall Clock** | N/A | Implicitly bounded by Fuel (approx. ~2-5s depending on host) |
+| Resource          | Limit | Mechanism                                                    |
+| :---------------- | :---- | :----------------------------------------------------------- |
+| **Memory**        | 64 MB | `StoreLimits` / `ResourceLimiter`                            |
+| **Stdout Buffer** | 1 MB  | `MemoryOutputPipe`                                           |
+| **Instances**     | 1     | `StoreLimits` (per request)                                  |
+| **Wall Clock**    | N/A   | Implicitly bounded by Fuel (approx. ~2-5s depending on host) |
 
 ### Memory Growth Calculation
 

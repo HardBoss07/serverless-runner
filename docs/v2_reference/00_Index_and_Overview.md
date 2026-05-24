@@ -19,7 +19,7 @@ This project utilizes **Fuel Metering** as the primary mechanism for resource co
 
 ### The Fuel Concept
 
-Fuel is a monotonic counter representing the computational "budget" allocated to a single execution of a Wasm module. 
+Fuel is a monotonic counter representing the computational "budget" allocated to a single execution of a Wasm module.
 
 1. **Injection:** Before execution, the runner injects a specific amount of fuel into the Wasm store.
 2. **Consumption:** As the Wasm instructions are executed by the `wasmtime` engine, fuel is consumed. Each instruction has a cost.

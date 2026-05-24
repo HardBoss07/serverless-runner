@@ -4,18 +4,18 @@ This catalog provides a comprehensive matrix of all Wasm guests currently suppor
 
 ## Guest Matrix
 
-| Guest Name | Use Case | Expected Input | Expected Outcome | Fuel/Resource Behavior |
-| :--- | :--- | :--- | :--- | :--- |
-| `env-reader` | Security / Isolation | None | Prints "Env var not found" | Baseline fuel. Verifies environment isolation. |
-| `fibonacci` | Compute / Fuel Test | Query `?number=n` | n-th Fibonacci number | Recursive. High fuel consumption for large `n`. |
-| `fs-reader` | Security / Sandbox | None | Prints "pre-opened" error | Verifies filesystem isolation. |
-| `hello-world` | Basic Smoke Test | Optional `stdin` name | "Hello, [name]!" | Minimal fuel consumption. |
-| `infinite-loop` | Timeout Testing | None | `504 Gateway Timeout` | Consumes all 100M fuel units and traps. |
-| `long-output` | Persistence Test | None | 3000 bytes of 'B' | Verifies DB snippet truncation (2048 chars). |
-| `memory-hog` | Memory Limit Test | None | `500 Internal Error` | Traps when exceeding 64MB memory limit. |
-| `net-guest` | Security / Network | None | Prints "Operation not supported" | Verifies network sandbox. |
-| `panic-guest` | Error Handling | None | `500 Internal Error` | Exits with code 101. Verifies error mapping. |
-| `stdout-spammer` | Buffer Limit Test | None | 1MB of 'A' | Truncated by the 1MB host pipe limit. |
+| Guest Name       | Use Case             | Expected Input        | Expected Outcome                 | Fuel/Resource Behavior                          |
+| :--------------- | :------------------- | :-------------------- | :------------------------------- | :---------------------------------------------- |
+| `env-reader`     | Security / Isolation | None                  | Prints "Env var not found"       | Baseline fuel. Verifies environment isolation.  |
+| `fibonacci`      | Compute / Fuel Test  | Query `?number=n`     | n-th Fibonacci number            | Recursive. High fuel consumption for large `n`. |
+| `fs-reader`      | Security / Sandbox   | None                  | Prints "pre-opened" error        | Verifies filesystem isolation.                  |
+| `hello-world`    | Basic Smoke Test     | Optional `stdin` name | "Hello, [name]!"                 | Minimal fuel consumption.                       |
+| `infinite-loop`  | Timeout Testing      | None                  | `504 Gateway Timeout`            | Consumes all 100M fuel units and traps.         |
+| `long-output`    | Persistence Test     | None                  | 3000 bytes of 'B'                | Verifies DB snippet truncation (2048 chars).    |
+| `memory-hog`     | Memory Limit Test    | None                  | `500 Internal Error`             | Traps when exceeding 64MB memory limit.         |
+| `net-guest`      | Security / Network   | None                  | Prints "Operation not supported" | Verifies network sandbox.                       |
+| `panic-guest`    | Error Handling       | None                  | `500 Internal Error`             | Exits with code 101. Verifies error mapping.    |
+| `stdout-spammer` | Buffer Limit Test    | None                  | 1MB of 'A'                       | Truncated by the 1MB host pipe limit.           |
 
 ---
 
