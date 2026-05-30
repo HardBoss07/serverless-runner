@@ -28,6 +28,13 @@ serverless-runner/
 ├── db/
 │   └── schema.sql
 ├── docs/
+│   ├── final/
+│   │   ├── 00_Index.md
+│   │   ├── 01_Executive_Summary.md
+│   │   ├── 02_Concurrency_and_Compute.md
+│   │   ├── 03_Data_Persistence_and_Identifiers.md
+│   │   ├── 04_Resource_Management_and_Isolation.md
+│   │   └── 05_Performance_Optimization_Report.md
 │   ├── test_results/
 │   │   ├── final_test_results.txt
 │   │   ├── hello_test_results.txt
